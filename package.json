@@ -1,0 +1,35 @@
+{
+  "name": "surface",
+  "version": "0.0.1",
+  "description": "Library providing tools to working on surface (.tree, .dds, TreeNode, etc.)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/orbiter-gears/surface.git"
+  },
+  "keywords": [
+    "orbiter",
+    "dds",
+    "tree",
+    "surface"
+  ],
+  "contributors": [
+    {
+      "name": "Viktor Dakalov",
+      "email": "atlantidu@gmail.com"
+    }
+  ],
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/orbiter-gears/surface/issues"
+  },
+  "homepage": "https://github.com/orbiter-gears/surface#readme",
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}
