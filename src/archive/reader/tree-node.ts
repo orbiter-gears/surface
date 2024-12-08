@@ -18,7 +18,7 @@ type TreeNode = {
   /**
    * Array index positions of the children
    */
-  readonly children: Readonly<number>[];
+  readonly children: Readonly<(number | undefined)[]>;
   /**
    * Reserved, may contain garbage data
    */

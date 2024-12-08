@@ -1,5 +1,4 @@
 import * as fs from 'node:fs';
-import * as zlib from 'node:zlib';
 
 import Header from './header';
 import TreeNode from './tree-node';
@@ -101,9 +100,8 @@ export default class Reader {
     return nodes;
   }
 
-  public readTreeNodeUncompressedData(treeNode: TreeNode, header = this.readHeader()): Buffer {
-    const buffer = this.readBytes(treeNode.length, [header.data.offset + treeNode.position]);
-    return zlib.inflateSync(buffer);
+  public readTreeNodeData(treeNode: TreeNode, header = this.readHeader()): Buffer {
+    return this.readBytes(treeNode.length, [header.data.offset + treeNode.position]);
   }
 
   public destroy(): void {
