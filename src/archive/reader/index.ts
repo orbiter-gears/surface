@@ -4,6 +4,7 @@ import Header from './header';
 import TreeNode from './tree-node';
 
 type TreeNodeMod = Omit<TreeNode, 'length'> & { length: number };
+type Context = [offset: bigint];
 
 /**
  * Read information from specified path to .tree file
@@ -30,25 +31,26 @@ export default class Reader {
     this.fd = fs.openSync(this.filename, 'r');
   }
 
-  private read(length: number, context: [offset: number], offset: number = context[0]): Buffer {
+  private read(length: number, context: Context): Buffer {
     const buffer = Buffer.alloc(length);
-    fs.readSync(this.fd, buffer, 0, buffer.length, offset);
+    fs.readSync(this.fd, buffer, 0, buffer.length, context[0]);
+    context[0] += BigInt(length);
     return buffer;
   }
 
-  private readBytes(length: number, context: [offset: number]): Buffer {
+  private readBytes(length: number, context: Context): Buffer {
     return this.read(length, context);
   }
 
-  private readInt(context: [offset: number]): number {
+  private readInt(context: Context): number {
     return this.read(4, context).readInt32LE();
   }
 
-  private readInt64(context: [offset: number]): bigint {
+  private readInt64(context: Context): bigint {
     return this.read(8, context).readBigInt64LE();
   }
 
-  private readTreeNode(context: [offset: number]): TreeNode {
+  private readTreeNode(context: Context): TreeNode {
     return {
       position: this.readInt64(context),
       length: Number.NaN, // filled in upper call
@@ -64,7 +66,7 @@ export default class Reader {
   }
 
   public readHeader(): Header {
-    const context = [0];
+    const context: Context = [BigInt(0)];
 
     // read magic
     const magicBuffer = this.readBytes(4, context);
@@ -86,22 +88,21 @@ export default class Reader {
   }
 
   public readTableOfContent(header: Header = this.readHeader(), limit: number = header.nodes): TreeNode[] {
-    const context = [header.size];
+    const context: Context = [BigInt(header.size)];
     const nodes: TreeNodeMod[] = [];
     let previous: TreeNodeMod | undefined = undefined;
-    while (header.nodes > limit) {
+    while (limit-- > 0) {
       const node = this.readTreeNode(context);
       if (previous !== undefined) {
         previous.length = Number(node.position - previous.position);
       }
       nodes.push(previous = node);
     }
-
     return nodes;
   }
 
   public readTreeNodeData(treeNode: TreeNode, header = this.readHeader()): Buffer {
-    return this.readBytes(treeNode.length, [header.data.offset + treeNode.position]);
+    return this.readBytes(treeNode.length, [BigInt(header.data.offset) + treeNode.position]);
   }
 
   public destroy(): void {

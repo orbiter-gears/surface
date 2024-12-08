@@ -1,3 +1,7 @@
+import Distance from './distance';
+import Degree from './degree';
+import GeoPoint from './geo-point';
+
 /**
  * Geo bounding box
  * Operates geo-points that is in range from 0W to 360E
@@ -9,42 +13,52 @@ export default class GeoBound {
    * Creates and returns global bound
    */
   public static createGlobal(): GeoBound {
-    return new this(0, 360, 0, 180);
+    return new this(new Degree(0), new Degree(360), new Degree(0), new Degree(180));
   }
 
   /**
    * Create and returns west hemisphere bound
    */
   public static createWestHemisphere(): GeoBound {
-    return new this(0, 180, 0, 180);
+    return new this(new Degree(0), new Degree(180), new Degree(0), new Degree(180));
   }
 
   /**
    * Create and returns east hemisphere bound
    */
   public static createEastHemisphere(): GeoBound {
-    return new this(180, 360, 0, 180);
+    return new this(new Degree(180), new Degree(360), new Degree(0), new Degree(180));
   }
 
   /**
    * Degree in range from 0W to 360E
    */
-  public readonly west: number;
+  public readonly west: Degree;
 
   /**
    * Degree in range from 0W to 360E
    */
-  public readonly east: number;
+  public readonly east: Degree;
 
   /**
    * Degree in range from 0N to 180S
    */
-  public readonly north: number;
+  public readonly north: Degree;
 
   /**
    * Degree in range from 0N to 180S
    */
-  public readonly south: number;
+  public readonly south: Degree;
+
+  /**
+   * SurfaceNode's tile width
+   */
+  public readonly width: Degree;
+
+  /**
+   * SurfaceNode's tile height
+   */
+  public readonly height: Degree;
 
   /**
    *
@@ -53,11 +67,13 @@ export default class GeoBound {
    * @param {number} north Degree in range from 0N to 180S
    * @param {number} south Degree in range from 0N to 180S
    */
-  constructor(west: number, east: number, north: number, south: number) {
+  constructor(west: Degree, east: Degree, north: Degree, south: Degree) {
     this.west = west;
     this.east = east;
     this.north = north;
     this.south = south;
+    this.width = new Degree(east.valueOf() - west.valueOf());
+    this.height = new Degree(south.valueOf() - north.valueOf());
   }
 
   /**
@@ -66,9 +82,9 @@ export default class GeoBound {
   public createNorthWestQuad(): GeoBound {
     return new GeoBound(
       this.west,
-      this.west + ((this.east - this.west) / 2),
+      new Degree(this.west.valueOf() + this.width.half.valueOf()),
       this.north,
-      this.north + ((this.south - this.north) / 2));
+      new Degree(this.north.valueOf() + this.height.half.valueOf()));
   }
 
   /**
@@ -76,10 +92,10 @@ export default class GeoBound {
    */
   public createNorthEastQuad(): GeoBound {
     return new GeoBound(
-      this.west + ((this.east - this.west) / 2),
+      new Degree(this.west.valueOf() + this.width.half.valueOf()),
       this.east,
       this.north,
-      this.north + ((this.south - this.north) / 2));
+      new Degree(this.north.valueOf() + this.height.half.valueOf()));
   }
 
   /**
@@ -88,8 +104,8 @@ export default class GeoBound {
   public createSouthWestQuad(): GeoBound {
     return new GeoBound(
       this.west,
-      this.west + ((this.east - this.west) / 2),
-      this.north + ((this.south - this.north) / 2),
+      new Degree(this.west.valueOf() + this.width.half.valueOf()),
+      new Degree(this.north.valueOf() + this.height.half.valueOf()),
       this.south);
   }
 
@@ -98,9 +114,21 @@ export default class GeoBound {
    */
   public createSouthEastQuad(): GeoBound {
     return new GeoBound(
-      this.west + ((this.east - this.west) / 2),
+      new Degree(this.west.valueOf() + ((this.east.valueOf() - this.west.valueOf()) / 2)),
       this.east,
-      this.north + ((this.south - this.north) / 2),
+      new Degree(this.north.valueOf() + ((this.south.valueOf() - this.north.valueOf()) / 2)),
       this.south);
+  }
+
+  /**
+   * Check if bound contains GeoPoint
+   * @param left
+   * @param top
+   */
+  public contains({ left, top }: GeoPoint): boolean {
+    return left.valueOf() >= this.west.valueOf()
+      && this.east.valueOf() > left.valueOf()
+      && top.valueOf() >= this.north.valueOf()
+      && this.south.valueOf() > top.valueOf();
   }
 }

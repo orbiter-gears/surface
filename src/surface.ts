@@ -7,6 +7,8 @@ import GeoBound from './geo-bound';
  */
 export default class Surface extends Array<SurfaceNode> {
 
+
+
   /**
    *
    * @param archive Surface archive
@@ -28,7 +30,9 @@ export default class Surface extends Array<SurfaceNode> {
           node = new SurfaceNode(archive, treeNodeIndex, 4, undefined, GeoBound.createEastHemisphere());
           break;
       }
-      this[treeRootsIndex] = node;
+      if (node !== undefined) {
+        this[treeRootsIndex] = node;
+      }
     }
   }
 }

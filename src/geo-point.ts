@@ -1,3 +1,4 @@
+import Distance from './distance';
 import Coordinate from './coordinate';
 
 /**
@@ -13,27 +14,27 @@ export default class GeoPoint {
    * @param latitude
    */
   public static fromCoordinate({ longitude, latitude }: Coordinate): GeoPoint {
-    return new this(longitude + 180, latitude + 90);
+    return new this(new Distance(longitude.valueOf() + 180), new Distance(latitude.valueOf() + 90));
   }
 
   /**
    * Geo horizontal offset (longitude)
    * Range from 0W to 360E degree
    */
-  public readonly left: number;
+  public readonly left: Distance;
 
   /**
    * Geo vertical offset (latitude)
    * Range from 0N to 180S degree
    */
-  public readonly top: number;
+  public readonly top: Distance;
 
   /**
    *
    * @param left Geo horizontal offset (longitude)
    * @param top Geo vertical offset (latitude)
    */
-  constructor(left: number, top: number) {
+  constructor(left: Distance, top: Distance) {
     this.left = left;
     this.top = top;
   }
@@ -43,5 +44,12 @@ export default class GeoPoint {
    */
   public toCoordinate(): Coordinate {
     return Coordinate.fromGeoPoint(this);
+  }
+
+  /**
+   * Returns string representation
+   */
+  public toString(): string {
+    return `${this.left.toString()} ${this.top.toString()}`;
   }
 }

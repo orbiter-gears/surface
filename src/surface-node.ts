@@ -1,6 +1,23 @@
 import TreeNode from './archive/reader/tree-node';
 import Archive from './archive';
 import GeoBound from './geo-bound';
+import GeoPoint from './geo-point';
+
+type SurfaceNodeChild = SurfaceNode | undefined;
+
+type Siblings = {
+  readonly west: SurfaceNodeChild;
+  readonly east: SurfaceNodeChild,
+  readonly north: SurfaceNodeChild;
+  readonly south: SurfaceNodeChild;
+};
+
+type Children = [
+  SurfaceNodeChild,
+  SurfaceNodeChild,
+  SurfaceNodeChild,
+  SurfaceNodeChild
+];
 
 /**
  * Surface tail node
@@ -25,7 +42,7 @@ export default class SurfaceNode {
   /**
    * Node parent if node is not global or hemisphere
    */
-  public readonly parent: SurfaceNode | undefined;
+  public readonly parent: SurfaceNodeChild;
 
   /**
    * Tail bounding box
@@ -35,17 +52,9 @@ export default class SurfaceNode {
   /**
    * Tail children
    */
-  public readonly children: [
-    SurfaceNode | undefined,
-    SurfaceNode | undefined,
-    SurfaceNode | undefined,
-    SurfaceNode | undefined
-  ] = [
-    undefined,
-    undefined,
-    undefined,
-    undefined
-  ];
+  public readonly children: Readonly<Children>;
+
+  // public readonly siblings: Siblings;
 
   /**
    * Archive reference
@@ -61,35 +70,87 @@ export default class SurfaceNode {
    * @param parent Parent if exists
    * @param bound Tail surface bound
    */
-  constructor(archive: Archive, index: number, resolutionLevel: number, parent: SurfaceNode | undefined, bound: GeoBound) {
+  constructor(archive: Archive, index: number, resolutionLevel: number, parent: SurfaceNodeChild, bound: GeoBound) {
     this.archive = archive;
     this.index = index;
     this.origin = archive.nodes[index];
     this.resolutionLevel = resolutionLevel;
     this.parent = parent;
     this.bound = bound;
-
-    this.defineChildren();
+    this.children = this.createChildren();
+    // this.siblings = {};
   }
 
   /**
    * Define children as SurfaceNode's instances
    * @private
    */
-  private defineChildren(): void {
+  private createChildren(): Children {
+    const children: Children = [undefined, undefined, undefined, undefined];
     const [nw, ne, sw, se] = this.origin.children;
     const rl = this.resolutionLevel + 1;
-    if (nw !== undefined) {
-      this.children[0] = new SurfaceNode(this.archive, nw, rl, this, this.bound.createNorthWestQuad());
+    if (nw !== -1) {
+      children[0] = new SurfaceNode(this.archive, nw, rl, this, this.bound.createNorthWestQuad());
     }
-    if (ne !== undefined) {
-      this.children[0] = new SurfaceNode(this.archive, ne, rl, this, this.bound.createNorthEastQuad());
+    if (ne !== -1) {
+      children[1] = new SurfaceNode(this.archive, ne, rl, this, this.bound.createNorthEastQuad());
     }
-    if (sw !== undefined) {
-      this.children[0] = new SurfaceNode(this.archive, sw, rl, this, this.bound.createSouthWestQuad());
+    if (sw !== -1) {
+      children[2] = new SurfaceNode(this.archive, sw, rl, this, this.bound.createSouthWestQuad());
     }
-    if (se !== undefined) {
-      this.children[0] = new SurfaceNode(this.archive, se, rl, this, this.bound.createSouthEastQuad());
+    if (se !== -1) {
+      children[3] = new SurfaceNode(this.archive, se, rl, this, this.bound.createSouthEastQuad());
     }
+    return children;
+  }
+
+  /**
+   * Check if node contains GeoPoint
+   * @param geoPoint
+   */
+  public contains(geoPoint: GeoPoint): boolean {
+    return this.bound.contains(geoPoint);
+  }
+
+  /**
+   * Try to find children SurfaceNode by GeoPoint
+   * @param geoPoint
+   */
+  public findChildByGeoPoint(geoPoint: GeoPoint): SurfaceNodeChild {
+    for (const childNode of this.children) {
+      if (childNode !== undefined && childNode.contains(geoPoint)) {
+        return childNode;
+      }
+    }
+  }
+
+  /**
+   *
+   * @param geoPoint
+   * @param maxResolutionLevel
+   */
+  public findByGeoPointRecursively(geoPoint: GeoPoint, maxResolutionLevel?: number): SurfaceNodeChild {
+    if ((maxResolutionLevel !== undefined && this.resolutionLevel > maxResolutionLevel) || !this.contains(geoPoint)) {
+      return undefined;
+    }
+    if (this.resolutionLevel === maxResolutionLevel) {
+      return this;
+    }
+    for (const childNode of this.children) {
+      if (childNode !== undefined) {
+        const found = childNode.findByGeoPointRecursively(geoPoint, maxResolutionLevel);
+        if (found !== undefined) {
+          return found;
+        }
+      }
+    }
+  }
+
+  /**
+   * Read from archive and returns decompressed TreeNode data as content of .dds file
+   * @private
+   */
+  public getData(): Buffer {
+    return this.archive.readTreeNodeDecompressedData(this.origin);
   }
 }
