@@ -1,6 +1,4 @@
-import Distance from './distance';
-import Degree from './degree';
-import GeoPoint from './geo-point';
+import { Gp, GpLon, GpLat } from './unit';
 
 /**
  * Geo bounding box
@@ -13,67 +11,79 @@ export default class GeoBound {
    * Creates and returns global bound
    */
   public static createGlobal(): GeoBound {
-    return new this(new Degree(0), new Degree(360), new Degree(0), new Degree(180));
+    return new this(0, 360, 0, 180);
   }
 
   /**
    * Create and returns west hemisphere bound
    */
   public static createWestHemisphere(): GeoBound {
-    return new this(new Degree(0), new Degree(180), new Degree(0), new Degree(180));
+    return new this(0, 180, 0, 180);
   }
 
   /**
    * Create and returns east hemisphere bound
    */
   public static createEastHemisphere(): GeoBound {
-    return new this(new Degree(180), new Degree(360), new Degree(0), new Degree(180));
+    return new this(180, 360, 0, 180);
   }
 
   /**
    * Degree in range from 0W to 360E
    */
-  public readonly west: Degree;
+  public readonly west: GpLon;
 
   /**
    * Degree in range from 0W to 360E
    */
-  public readonly east: Degree;
+  public readonly east: GpLon;
 
   /**
    * Degree in range from 0N to 180S
    */
-  public readonly north: Degree;
+  public readonly north: GpLat;
 
   /**
    * Degree in range from 0N to 180S
    */
-  public readonly south: Degree;
+  public readonly south: GpLat;
 
   /**
    * SurfaceNode's tile width
    */
-  public readonly width: Degree;
+  public readonly width: GpLon;
+
+  /**
+   * SurfaceNode's tile half width
+   */
+  public readonly halfWidth: GpLon;
 
   /**
    * SurfaceNode's tile height
    */
-  public readonly height: Degree;
+  public readonly height: GpLat;
+
+  /**
+   * SurfaceNode's tile half height
+   */
+  public readonly halfHeight: GpLat;
 
   /**
    *
-   * @param {number} west Degree in range from 0W to 360E
-   * @param {number} east Degree in range from 0W to 360E
-   * @param {number} north Degree in range from 0N to 180S
-   * @param {number} south Degree in range from 0N to 180S
+   * @param west
+   * @param east
+   * @param north
+   * @param south
    */
-  constructor(west: Degree, east: Degree, north: Degree, south: Degree) {
+  constructor(west: GpLon, east: GpLon, north: GpLat, south: GpLat) {
     this.west = west;
     this.east = east;
     this.north = north;
     this.south = south;
-    this.width = new Degree(east.valueOf() - west.valueOf());
-    this.height = new Degree(south.valueOf() - north.valueOf());
+    this.width = east - west;
+    this.halfWidth = this.width / 2;
+    this.height = south - north;
+    this.halfHeight = this.height / 2;
   }
 
   /**
@@ -81,10 +91,8 @@ export default class GeoBound {
    */
   public createNorthWestQuad(): GeoBound {
     return new GeoBound(
-      this.west,
-      new Degree(this.west.valueOf() + this.width.half.valueOf()),
-      this.north,
-      new Degree(this.north.valueOf() + this.height.half.valueOf()));
+      this.west, this.west + this.width,
+      this.north, this.north + this.height);
   }
 
   /**
@@ -92,10 +100,8 @@ export default class GeoBound {
    */
   public createNorthEastQuad(): GeoBound {
     return new GeoBound(
-      new Degree(this.west.valueOf() + this.width.half.valueOf()),
-      this.east,
-      this.north,
-      new Degree(this.north.valueOf() + this.height.half.valueOf()));
+      this.west + this.width, this.east,
+      this.north, this.north + this.height);
   }
 
   /**
@@ -103,10 +109,8 @@ export default class GeoBound {
    */
   public createSouthWestQuad(): GeoBound {
     return new GeoBound(
-      this.west,
-      new Degree(this.west.valueOf() + this.width.half.valueOf()),
-      new Degree(this.north.valueOf() + this.height.half.valueOf()),
-      this.south);
+      this.west, this.west + this.width,
+      this.north + this.height, this.south);
   }
 
   /**
@@ -114,21 +118,50 @@ export default class GeoBound {
    */
   public createSouthEastQuad(): GeoBound {
     return new GeoBound(
-      new Degree(this.west.valueOf() + ((this.east.valueOf() - this.west.valueOf()) / 2)),
-      this.east,
-      new Degree(this.north.valueOf() + ((this.south.valueOf() - this.north.valueOf()) / 2)),
-      this.south);
+      this.west + ((this.east - this.west) / 2), this.east,
+      this.north + ((this.south - this.north) / 2), this.south);
+  }
+
+  /**
+   * Creates and returns GeoPoint points to center of the bound
+   */
+  public createCenterGp(): Gp {
+    return [this.west + this.halfWidth, this.north + this.halfHeight];
+  }
+
+  /**
+   * Creates and returns GeoPoint points to center of western sibling node
+   */
+  public createWestSiblingCenterGp(): Gp {
+    return [this.west - this.halfWidth, this.north + this.halfWidth];
+  }
+
+  /**
+   * Creates and returns GeoPoint points to center of eastern sibling node
+   */
+  public createEastSiblingCenterGp(): Gp {
+    return [this.east + this.halfWidth, this.north + this.halfHeight];
+  }
+
+  /**
+   * Creates and returns GeoPoint points to center of southern sibling node
+   */
+  public createNorthSiblingCenterGp(): Gp {
+    return [this.west + this.halfWidth, this.north - this.halfHeight];
+  }
+
+  /**
+   * Creates and returns GeoPoint points to center of northern sibling node
+   */
+  public createSouthSiblingCenterGp(): Gp {
+    return [this.west + this.halfWidth, this.south + this.halfHeight];
   }
 
   /**
    * Check if bound contains GeoPoint
-   * @param left
-   * @param top
    */
-  public contains({ left, top }: GeoPoint): boolean {
-    return left.valueOf() >= this.west.valueOf()
-      && this.east.valueOf() > left.valueOf()
-      && top.valueOf() >= this.north.valueOf()
-      && this.south.valueOf() > top.valueOf();
+  public contains([lon, lat]: Gp): boolean {
+    return lon >= this.west && this.east > lon
+      && lat >= this.north && this.south > lat;
   }
 }
